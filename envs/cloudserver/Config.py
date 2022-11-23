@@ -9,6 +9,8 @@ class ConfigTimeSeries:
         self.window = window
         self.columns = ["dt","CPU utilization (%)","Memory used  (%)","anomaly"]
         self.value_columns = ["CPU utilization (%)","Memory used  (%)"]
+        self.filename = "test_df.csv"
+        
 
     def __repr__(self):
         return {"normal": self.normal, "anomaly": self.anomaly,

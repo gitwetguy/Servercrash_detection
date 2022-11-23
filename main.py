@@ -25,8 +25,9 @@ from torch.nn.utils import parameters_to_vector, vector_to_parameters
 from tqdm import tqdm
 
 import learn2learn as l2l
-from policy.policies import DiagNormalPolicy,Categorical
+from policy.policies import DiagNormalPolicy,CategoricalPolicy
 
+from envs.cloudserver.Serverusage import Serverusage
 from envs.cloudserver.BaseEnvironment import TimeSeriesEnvironment
 from envs.cloudserver.WindowStateEnvironment import WindowStateEnvironment
 from envs.cloudserver.Config import ConfigTimeSeries
@@ -58,6 +59,8 @@ def maml_a2c_loss(train_episodes, learner, baseline, gamma, tau):
     dones = train_episodes.done()
     next_states = train_episodes.next_state()
     log_probs = learner.log_prob(states, actions)
+    print("states:{}".format(states.shape))
+    print("states:{}".format(states))
     advantages = compute_advantages(baseline, tau, gamma, rewards,
                                     dones, states, next_states)
     advantages = ch.normalize(advantages).detach()
@@ -120,12 +123,12 @@ def main(
         meta_lr=1.0,
         adapt_steps=1,
         num_iterations=3,
-        meta_bsz=20,
-        adapt_bsz=20,
+        meta_bsz=5,
+        adapt_bsz=5,
         tau=1.00,
         gamma=0.95,
         seed=42,
-        num_workers=3,
+        num_workers=2,
         cuda=1,
 ):
     cuda = bool(cuda)
@@ -140,15 +143,16 @@ def main(
 
     def make_env():
         
-        env = WindowStateEnvironment()
+        env = Serverusage()
         #env = ch.envs.ActionSpaceScaler(env)
         return env
-
+    
     env = l2l.gym.AsyncVectorEnv([make_env for _ in range(num_workers)])
     env.seed(seed)
     env.set_task(env.sample_tasks(1)[0])
     env = ch.envs.Torch(env)
-    policy = DiagNormalPolicy(env.state_size, env.action_size, device=device)
+    # print("main size :{}--{}".format(env.state_size, env.action_size))
+    policy = CategoricalPolicy(env.state_size,env.action_size,device=device)
     if cuda:
         policy = policy.to(device)
     baseline = LinearValue(env.state_size, env.action_size)

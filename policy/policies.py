@@ -103,10 +103,12 @@ class DiagNormalPolicy(nn.Module):
 
 class CategoricalPolicy(nn.Module):
 
-    def __init__(self, input_size, output_size, hiddens=None):
+    def __init__(self, input_size, output_size, hiddens=None, device='cpu'):
         super(CategoricalPolicy, self).__init__()
+        self.device = device
         if hiddens is None:
             hiddens = [100, 100]
+        # print("nn:{}-{}".format(input_size, output_size))
         layers = [linear_init(nn.Linear(input_size, hiddens[0])), nn.ReLU()]
         for i, o in zip(hiddens[:-1], hiddens[1:]):
             layers.append(linear_init(nn.Linear(i, o)))
@@ -114,11 +116,26 @@ class CategoricalPolicy(nn.Module):
         layers.append(linear_init(nn.Linear(hiddens[-1], output_size)))
         self.mean = nn.Sequential(*layers)
         self.input_size = input_size
+        self.output_size = output_size
+        self.sigma = nn.Parameter(torch.Tensor(output_size))
+        self.sigma.data.fill_(math.log(1))
 
     def forward(self, state):
-        state = ch.onehot(state, dim=self.input_size)
+        #print("forward:{}-{}".format(state.shape, self.output_size))
+        state = state.to(self.device)
+        #state = ch.onehot(state, dim=self.input_size)
         loc = self.mean(state)
         density = Categorical(logits=loc)
         action = density.sample()
         log_prob = density.log_prob(action).mean().view(-1, 1).detach()
         return action, {'density': density, 'log_prob': log_prob}
+    
+    def density(self, state):
+        state = state.to(self.device, non_blocking=True)
+        loc = self.mean(state)
+        scale = torch.exp(torch.clamp(self.sigma, min=math.log(EPSILON)))
+        return Normal(loc=loc, scale=scale)
+
+    def log_prob(self, state, action):
+        density = self.density(state)
+        return density.log_prob(action).mean(dim=1, keepdim=True)

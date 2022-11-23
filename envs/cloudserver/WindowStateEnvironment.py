@@ -26,11 +26,11 @@ class WindowStateEnvironment:
         """
         self.window_size = window_size
         self.columns = cfg.value_columns
-        self.env = environment
+        
         if task is None:
             task = self.sample_tasks(1)[0]
         self.set_task(task)
-        self.env = environment
+        #self.env = environment
         if environment is None:
             raise TypeError("Base environment must be instantiated")
         elif isinstance(environment, TimeSeriesEnvironment):
@@ -122,6 +122,7 @@ class WindowStateEnvironment:
         self._task = task
         self._goal = task['goal']
 
+    
     def __len__(self):
         """
         Length of the current Timeseries
