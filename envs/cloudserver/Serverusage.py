@@ -123,7 +123,7 @@ class Serverusage(MetaEnv):
                 
                 return win_state
             else:
-                return np.zeros(self.window*len(self.config.value_columns)).reshape(-1,)
+                return np.ones(self.window*len(self.config.value_columns)).reshape(-1,)
 
     def step(self, action):
         """
@@ -136,11 +136,8 @@ class Serverusage(MetaEnv):
         
         self.update_cursor()
 
-        if self.is_done():
-
-            next_state = []
-        else:
-            next_state = self.__state()
+        
+        next_state = self.__state()
 
         #self._state, reward, done, self._task
         #return current_state, action, reward, next_state, self.is_done()

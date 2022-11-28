@@ -130,7 +130,9 @@ class CategoricalPolicy(nn.Module):
     
     def density(self, state):
         state = state.to(self.device, non_blocking=True)
+        # print("state:{}".format(state))
         loc = self.mean(state)
+        # print("loc:{}".format(loc))
         scale = torch.exp(torch.clamp(self.sigma, min=math.log(EPSILON)))
         return Normal(loc=loc, scale=scale)
 

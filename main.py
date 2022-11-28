@@ -126,13 +126,13 @@ def main(
         adapt_lr=0.1,
         meta_lr=1.0,
         adapt_steps=1,
-        num_iterations=10,
-        meta_bsz=2,
-        adapt_bsz=2,
+        num_iterations=100,
+        meta_bsz=10,
+        adapt_bsz=10,
         tau=1.00,
         gamma=0.95,
         seed=42,
-        num_workers=2,
+        num_workers=10,
         cuda=1,
 ):
     cuda = bool(cuda)
