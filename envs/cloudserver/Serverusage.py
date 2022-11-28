@@ -37,7 +37,7 @@ class Serverusage(MetaEnv):
         super(Serverusage, self).__init__(task)
 
     
-        self.observation_space = spaces.Box(low=0., high=1.,shape=(self.config.window*len(self.config.value_columns),1), dtype=np.float32)
+        self.observation_space = spaces.Box(low=0., high=1.,shape=(self.config.window*len(self.config.value_columns),), dtype=np.float32)
         self.action_space = spaces.Discrete(len(self.action_space_n))
         #print(self.action_space.sample())
         
@@ -119,11 +119,11 @@ class Serverusage(MetaEnv):
                 for i in range(self.timeseries_cursor - self.window, self.timeseries_cursor):
                     win_state.append(self.timeseries_labeled[self.config.value_columns].values[i + 1])
                 win_state = np.array(win_state)
-                win_state = self.scaler.fit_transform(win_state).reshape(-1,1)
+                win_state = self.scaler.fit_transform(win_state).reshape(-1,)
                 
                 return win_state
             else:
-                return np.zeros(self.window*len(self.config.value_columns)).reshape(-1,1)
+                return np.zeros(self.window*len(self.config.value_columns)).reshape(-1,)
 
     def step(self, action):
         """

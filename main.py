@@ -32,6 +32,9 @@ from envs.cloudserver.BaseEnvironment import TimeSeriesEnvironment
 from envs.cloudserver.WindowStateEnvironment import WindowStateEnvironment
 from envs.cloudserver.Config import ConfigTimeSeries
 
+from torchsummary import summary
+
+
 
 
 
@@ -59,8 +62,9 @@ def maml_a2c_loss(train_episodes, learner, baseline, gamma, tau):
     dones = train_episodes.done()
     next_states = train_episodes.next_state()
     log_probs = learner.log_prob(states, actions)
-    print("states:{}".format(states.shape))
-    print("states:{}".format(states))
+    # print(log_probs)
+    # print("states:{}".format(states.shape))
+    # print("states:{}".format(states))
     advantages = compute_advantages(baseline, tau, gamma, rewards,
                                     dones, states, next_states)
     advantages = ch.normalize(advantages).detach()
@@ -118,13 +122,13 @@ def meta_surrogate_loss(iteration_replays, iteration_policies, policy, baseline,
 
 
 def main(
-        env_name='',
+        env_name='Serverusage',
         adapt_lr=0.1,
         meta_lr=1.0,
         adapt_steps=1,
-        num_iterations=3,
-        meta_bsz=5,
-        adapt_bsz=5,
+        num_iterations=10,
+        meta_bsz=2,
+        adapt_bsz=2,
         tau=1.00,
         gamma=0.95,
         seed=42,
@@ -143,18 +147,22 @@ def main(
 
     def make_env():
         
-        env = Serverusage()
-        #env = ch.envs.ActionSpaceScaler(env)
+        env = gym.make(env_name)
+        # env = ch.envs.ActionSpaceScaler(env)
         return env
     
     env = l2l.gym.AsyncVectorEnv([make_env for _ in range(num_workers)])
     env.seed(seed)
     env.set_task(env.sample_tasks(1)[0])
     env = ch.envs.Torch(env)
-    # print("main size :{}--{}".format(env.state_size, env.action_size))
+    print("main size :{}--{}".format(env.state_size, env.action_size))
     policy = CategoricalPolicy(env.state_size,env.action_size,device=device)
     if cuda:
         policy = policy.to(device)
+        print(summary(policy, input_size=(50,)))
+
+    
+    #print(env.state_size, env.action_size)
     baseline = LinearValue(env.state_size, env.action_size)
     result_seq = []
     for iteration in range(num_iterations):

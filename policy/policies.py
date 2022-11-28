@@ -104,26 +104,24 @@ class DiagNormalPolicy(nn.Module):
 class CategoricalPolicy(nn.Module):
 
     def __init__(self, input_size, output_size, hiddens=None, device='cpu'):
-        super(CategoricalPolicy, self).__init__()
-        self.device = device
-        if hiddens is None:
-            hiddens = [100, 100]
-        # print("nn:{}-{}".format(input_size, output_size))
-        layers = [linear_init(nn.Linear(input_size, hiddens[0])), nn.ReLU()]
-        for i, o in zip(hiddens[:-1], hiddens[1:]):
-            layers.append(linear_init(nn.Linear(i, o)))
-            layers.append(nn.ReLU())
-        layers.append(linear_init(nn.Linear(hiddens[-1], output_size)))
-        self.mean = nn.Sequential(*layers)
-        self.input_size = input_size
-        self.output_size = output_size
-        self.sigma = nn.Parameter(torch.Tensor(output_size))
-        self.sigma.data.fill_(math.log(1))
+            super(CategoricalPolicy, self).__init__()
+            self.device = device
+            if hiddens is None:
+                hiddens = [100, 100]
+            layers = [linear_init(nn.Linear(input_size, hiddens[0])), nn.ReLU()]
+            for i, o in zip(hiddens[:-1], hiddens[1:]):
+                layers.append(linear_init(nn.Linear(i, o)))
+                layers.append(nn.ReLU())
+            layers.append(linear_init(nn.Linear(hiddens[-1], output_size)))
+            self.mean = nn.Sequential(*layers)
+
+            self.input_size = input_size
+            self.sigma = nn.Parameter(torch.Tensor(output_size))
+            self.sigma.data.fill_(math.log(1))
 
     def forward(self, state):
-        #print("forward:{}-{}".format(state.shape, self.output_size))
-        state = state.to(self.device)
-        #state = ch.onehot(state, dim=self.input_size)
+        state=state.to(self.device, non_blocking=True)
+        state = ch.onehot(state, dim=self.input_size)
         loc = self.mean(state)
         density = Categorical(logits=loc)
         action = density.sample()
@@ -139,3 +137,8 @@ class CategoricalPolicy(nn.Module):
     def log_prob(self, state, action):
         density = self.density(state)
         return density.log_prob(action).mean(dim=1, keepdim=True)
+
+    def forward(self, state):
+        density = self.density(state)
+        action = density.sample()
+        return action
