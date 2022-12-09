@@ -1,3 +1,5 @@
+import os
+
 class ConfigTimeSeries:
     def __init__(self, normal=0, anomaly=1, action_space=[0, 1], separator=",", directory="D:/pythonwork/Servercrash_detection/dataset/", window=25):
         #D:\pythonwork\Servercrash_detection\dataset\test_df.csv

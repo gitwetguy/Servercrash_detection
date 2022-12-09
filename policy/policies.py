@@ -112,7 +112,9 @@ class CategoricalPolicy(nn.Module):
             for i, o in zip(hiddens[:-1], hiddens[1:]):
                 layers.append(linear_init(nn.Linear(i, o)))
                 layers.append(nn.ReLU())
+                
             layers.append(linear_init(nn.Linear(hiddens[-1], output_size)))
+            layers.append(nn.Softmax())
             self.mean = nn.Sequential(*layers)
 
             self.input_size = input_size
@@ -121,26 +123,37 @@ class CategoricalPolicy(nn.Module):
 
     def forward(self, state):
         state=state.to(self.device, non_blocking=True)
-        state = ch.onehot(state, dim=self.input_size)
+        #state = ch.onehot(state, dim=self.input_size)
+        
         loc = self.mean(state)
+        # print(loc)
         density = Categorical(logits=loc)
+        # print(density)
         action = density.sample()
         log_prob = density.log_prob(action).mean().view(-1, 1).detach()
         return action, {'density': density, 'log_prob': log_prob}
     
     def density(self, state):
-        state = state.to(self.device, non_blocking=True)
-        # print("state:{}".format(state))
+        # state = state.to(self.device, non_blocking=True)
+        state = state.to(self.device)
+        # print("state:{}".format(state.shape))
         loc = self.mean(state)
-        # print("loc:{}".format(loc))
+        # print("loc:{}".format(loc.shape))
         scale = torch.exp(torch.clamp(self.sigma, min=math.log(EPSILON)))
+        try:
+           Normal(loc=loc, scale=scale)
+        except:
+            torch.save(loc, r'D:\pythonwork\Servercrash_detection\error\loc.pt')
+            torch.save(scale, r'D:\pythonwork\Servercrash_detection\error\scale.pt')
+            torch.save(state, r'D:\pythonwork\Servercrash_detection\error\state.pt')
+            print(loc,scale) 
         return Normal(loc=loc, scale=scale)
 
     def log_prob(self, state, action):
         density = self.density(state)
         return density.log_prob(action).mean(dim=1, keepdim=True)
 
-    def forward(self, state):
-        density = self.density(state)
-        action = density.sample()
-        return action
+    # def forward(self, state):
+    #     density = self.density(state)
+    #     action = density.sample()
+    #     return action

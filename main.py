@@ -33,6 +33,10 @@ from envs.cloudserver.WindowStateEnvironment import WindowStateEnvironment
 from envs.cloudserver.Config import ConfigTimeSeries
 
 from torchsummary import summary
+from torch.utils.tensorboard import SummaryWriter
+
+from datetime import datetime
+
 
 
 
@@ -61,6 +65,7 @@ def maml_a2c_loss(train_episodes, learner, baseline, gamma, tau):
     rewards = train_episodes.reward()
     dones = train_episodes.done()
     next_states = train_episodes.next_state()
+    
     log_probs = learner.log_prob(states, actions)
     # print(log_probs)
     # print("states:{}".format(states.shape))
@@ -73,7 +78,9 @@ def maml_a2c_loss(train_episodes, learner, baseline, gamma, tau):
 
 def fast_adapt_a2c(clone, train_episodes, adapt_lr, baseline, gamma, tau, first_order=False):
     second_order = not first_order
+    #cal loss on train task
     loss = maml_a2c_loss(train_episodes, clone, baseline, gamma, tau)
+    #cal grad
     gradients = autograd.grad(loss,
                               clone.parameters(),
                               retain_graph=second_order,
@@ -126,7 +133,7 @@ def main(
         adapt_lr=0.1,
         meta_lr=1.0,
         adapt_steps=1,
-        num_iterations=100,
+        num_iterations=3000,
         meta_bsz=10,
         adapt_bsz=10,
         tau=1.00,
@@ -139,6 +146,7 @@ def main(
     random.seed(seed)
     np.random.seed(seed)
     torch.manual_seed(seed)
+    writer = SummaryWriter()
     device_name = 'cpu'
     if cuda:
         torch.cuda.manual_seed(seed)
@@ -165,7 +173,13 @@ def main(
     #print(env.state_size, env.action_size)
     baseline = LinearValue(env.state_size, env.action_size)
     result_seq = []
+
+    now = datetime.now()
+    dt_string = now.strftime("%d/%m/%Y_%H%M%S")
+    
     for iteration in range(num_iterations):
+        
+        
         iteration_reward = 0.0
         iteration_replays = []
         iteration_policies = []
@@ -198,6 +212,9 @@ def main(
         adaptation_reward = iteration_reward / meta_bsz
         print('adaptation_reward', adaptation_reward)
         result_seq.append(adaptation_reward)
+        writer.add_scalar("Reward/exp-{}".format(dt_string), adaptation_reward, iteration)
+        writer.close()
+        
         # TRPO meta-optimization
         backtrack_factor = 0.5
         ls_max_steps = 15
@@ -235,12 +252,16 @@ def main(
                 p.data.add_(-stepsize, u.data)
             new_loss, kl = meta_surrogate_loss(iteration_replays, iteration_policies, clone, baseline, tau, gamma,
                                                adapt_lr)
-
+            # print(clone)
             if new_loss < old_loss and kl < max_kl:
                 for p, u in zip(policy.parameters(), step):
                     p.data.add_(-stepsize, u.data)
                 break
+
+        torch.save(clone.state_dict(), "save/test.pt")
+
     np.savetxt("test.csv", np.array(result_seq), delimiter=",")
+    
                
 
 if __name__ == '__main__':

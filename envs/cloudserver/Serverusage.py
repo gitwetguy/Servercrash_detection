@@ -33,11 +33,13 @@ class Serverusage(MetaEnv):
         self.window = self.config.window
         self.timeseries_labeled = Utils.load_csv(self.file)
         self.action_space_n = {0: 'normal', 1: 'abnormal'}
-
+        self.state_dim = self.config.window*len(self.config.value_columns)
+        low = np.zeros(self.state_dim,dtype=np.float32)
+        high = np.ones(self.state_dim,dtype=np.float32)
         super(Serverusage, self).__init__(task)
-
+        
     
-        self.observation_space = spaces.Box(low=0., high=1.,shape=(self.config.window*len(self.config.value_columns),), dtype=np.float32)
+        self.observation_space = spaces.Box(low=low, high=high,shape=(self.config.window*len(self.config.value_columns),), dtype=np.float32)
         self.action_space = spaces.Discrete(len(self.action_space_n))
         #print(self.action_space.sample())
         
@@ -114,16 +116,27 @@ class Serverusage(MetaEnv):
             The Statefunction returning an array of the window states
             :return:
             """
-            if self.timeseries_cursor >= self.window:
-                win_state=[]
-                for i in range(self.timeseries_cursor - self.window, self.timeseries_cursor):
-                    win_state.append(self.timeseries_labeled[self.config.value_columns].values[i + 1])
-                win_state = np.array(win_state)
-                win_state = self.scaler.fit_transform(win_state).reshape(-1,)
+            if self.is_done():
+                return np.zeros(self.state_dim)
+
+            # if self.timeseries_cursor >= self.window:
+            win_state=[]
+            for i in range(self.timeseries_cursor - self.window, self.timeseries_cursor):
+                win_state.append(self.timeseries_labeled[self.config.value_columns].values[i + 1])
+            win_state = np.array(win_state)
+            win_state = self.scaler.fit_transform(win_state).reshape(-1,)
+            # win_state = win_state.reshape(-1,)
+            
+            return win_state
+            # else:
+            #     win_state=[]
+            #     for i in range(0, self.window):
+            #         win_state.append(self.timeseries_labeled[self.config.value_columns].values[i + 1])
+            #     win_state = np.array(win_state)
+            #     win_state = self.scaler.fit_transform(win_state).reshape(-1,)
+            #     # win_state = win_state.reshape(-1,)
                 
-                return win_state
-            else:
-                return np.ones(self.window*len(self.config.value_columns)).reshape(-1,)
+            #     return win_state
 
     def step(self, action):
         """
@@ -138,6 +151,7 @@ class Serverusage(MetaEnv):
 
         
         next_state = self.__state()
+        
 
         #self._state, reward, done, self._task
         #return current_state, action, reward, next_state, self.is_done()
@@ -152,15 +166,17 @@ class Serverusage(MetaEnv):
         :param action: type of action
         :return: arbitrary reward
         """
+
+        # print(action)
         if self.timeseries_cursor >= self.window and not self.done:
             if np.sum(self.timeseries_labeled['anomaly'][self.timeseries_cursor-self.window:self.timeseries_cursor].values) >= 1:
                 if action == 0:
-                    return -5  # false negative, miss alarm
+                    return -1  # false negative, miss alarm
                 else:
-                    return 5  # 10      # true positive
+                    return 1  # 10      # true positive
             if np.sum(self.timeseries_labeled['anomaly'][self.timeseries_cursor-self.window:self.timeseries_cursor].values) == 0:
                 if action == 1:
-                    return -5
+                    return -1
         return 0
 
     def render(self, mode=None):
