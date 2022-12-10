@@ -130,7 +130,8 @@ def meta_surrogate_loss(iteration_replays, iteration_policies, policy, baseline,
 
 def main(
         env_name='Serverusage',
-        adapt_lr=0.1,
+        exp_name = "reward_addTNreward",
+        adapt_lr=0.5,
         meta_lr=1.0,
         adapt_steps=1,
         num_iterations=3000,
@@ -176,7 +177,7 @@ def main(
 
     now = datetime.now()
     dt_string = now.strftime("%d/%m/%Y_%H%M%S")
-    
+
     for iteration in range(num_iterations):
         
         
@@ -212,7 +213,7 @@ def main(
         adaptation_reward = iteration_reward / meta_bsz
         print('adaptation_reward', adaptation_reward)
         result_seq.append(adaptation_reward)
-        writer.add_scalar("Reward/exp-{}".format(dt_string), adaptation_reward, iteration)
+        writer.add_scalar("Reward/{}_exp-{}".format(exp_name,dt_string), adaptation_reward, iteration)
         writer.close()
         
         # TRPO meta-optimization

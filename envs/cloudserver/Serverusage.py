@@ -37,6 +37,8 @@ class Serverusage(MetaEnv):
         low = np.zeros(self.state_dim,dtype=np.float32)
         high = np.ones(self.state_dim,dtype=np.float32)
         super(Serverusage, self).__init__(task)
+        self.good_reward = 1
+        self.bad_reward = 0.1
         
     
         self.observation_space = spaces.Box(low=low, high=high,shape=(self.config.window*len(self.config.value_columns),), dtype=np.float32)
@@ -171,12 +173,14 @@ class Serverusage(MetaEnv):
         if self.timeseries_cursor >= self.window and not self.done:
             if np.sum(self.timeseries_labeled['anomaly'][self.timeseries_cursor-self.window:self.timeseries_cursor].values) >= 1:
                 if action == 0:
-                    return -1  # false negative, miss alarm
+                    return -self.bad_reward  # false negative, miss alarm
                 else:
-                    return 1  # 10      # true positive
+                    return self.good_reward  # 10      # true positive
             if np.sum(self.timeseries_labeled['anomaly'][self.timeseries_cursor-self.window:self.timeseries_cursor].values) == 0:
                 if action == 1:
-                    return -1
+                    return -self.bad_reward
+                else:
+                    return self.good_reward
         return 0
 
     def render(self, mode=None):
