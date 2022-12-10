@@ -10,7 +10,7 @@ python examples/rl/maml_trpo.py
 
 import random
 from copy import deepcopy
-import sys
+import sys,os
 sys.path.append(r"D:\pythonwork\Servercrash_detection\envs\cloudserver")
 
 import cherry as ch
@@ -130,7 +130,7 @@ def meta_surrogate_loss(iteration_replays, iteration_policies, policy, baseline,
 
 def main(
         env_name='Serverusage',
-        exp_name = "reward_addTNreward",
+        exp_name = "reward_addTN",
         adapt_lr=0.5,
         meta_lr=1.0,
         adapt_steps=1,
@@ -213,7 +213,8 @@ def main(
         adaptation_reward = iteration_reward / meta_bsz
         print('adaptation_reward', adaptation_reward)
         result_seq.append(adaptation_reward)
-        writer.add_scalar("Reward/{}_exp-{}".format(exp_name,dt_string), adaptation_reward, iteration)
+        exp_num = len(os.listdir("runs"))
+        writer.add_scalar("Reward/{}_exp{}-{}".format(exp_name,exp_num,dt_string), adaptation_reward, iteration)
         writer.close()
         
         # TRPO meta-optimization

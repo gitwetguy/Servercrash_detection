@@ -181,6 +181,7 @@ class Serverusage(MetaEnv):
                     return -self.bad_reward
                 else:
                     return self.good_reward
+
         return 0
 
     def render(self, mode=None):
