@@ -130,7 +130,7 @@ def meta_surrogate_loss(iteration_replays, iteration_policies, policy, baseline,
 
 def main(
         env_name='Serverusage',
-        exp_name = "action0-0reward_winsize10_onlycpuusage",
+        exp_name = "action0-0reward_winsize10_onlycpuusage_editrange_addmoredata",
         adapt_lr=0.5,
         meta_lr=1.0,
         adapt_steps=1,

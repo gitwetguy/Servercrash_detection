@@ -10,7 +10,7 @@ import os
 from sklearn.preprocessing import MinMaxScaler
 
 import Plots
-import Utils
+import Utils,glob
 
 from gym import spaces
 import gym
@@ -28,10 +28,16 @@ class Serverusage(MetaEnv):
         self.config = ConfigTimeSeries()
         self.filename = self.config.filename
         self.file = os.path.join(self.config.directory + self.filename)
+        self.filelist = glob.glob(os.path.join(self.config.directory+"*"))
         self.sep = self.config.separator
         self.filename = self.config.filename
         self.window = self.config.window
+
+        self.timeseries_set = []
         self.timeseries_labeled = Utils.load_csv(self.file)
+        for pth in self.filelist:
+            self.timeseries_set.append(Utils.load_csv(pth))
+
         self.action_space_n = {0: 'normal', 1: 'abnormal'}
         self.state_dim = self.config.window*len(self.config.value_columns)
         low = np.zeros(self.state_dim,dtype=np.float32)
@@ -60,7 +66,11 @@ class Serverusage(MetaEnv):
         """
         Tasks correspond to a goal point chosen uniformly at random.
         """
-        rd_arr = np.random.randint(self.config.window, size=num_tasks)
+        rd_dataidx = np.random.randint(len(self.filelist),size=1)
+        self.timeseries_labeled=self.timeseries_set[rd_dataidx[0]]
+        rd_arr = np.random.randint(self.timeseries_labeled.shape[0]+self.config.window, size=num_tasks)
+        
+        # print(self.timeseries_set[rd_dataidx[0]])
         goals = []
 
         for i in rd_arr:
@@ -244,6 +254,7 @@ if __name__ == '__main__':
     print(env.action_space.sample())
     print(env.action_space.sample())
     print(env.action_space.sample())
+    print(env.sample_tasks(num_tasks=10))
     # while True:
     #     idx += 1
     #     s, r, d, t= env.step(1)

@@ -15,7 +15,7 @@ class ConfigTimeSeries:
         self.separator = separator
         self.window = window
         self.columns = ["dt","CPU utilization (%)","Memory used  (%)","anomaly"]
-        self.value_columns = ["CPU utilization (%)","Memory used  (%)"]
+        self.value_columns = ["CPU utilization (%)"]
         self.filename = "test_df.csv"
         
 
