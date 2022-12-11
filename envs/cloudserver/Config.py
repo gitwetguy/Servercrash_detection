@@ -6,7 +6,7 @@ class ConfigTimeSeries:
                        action_space=[0, 1], 
                        separator=",", 
                        home="D:/pythonwork/Servercrash_detection", 
-                       window=25):
+                       window=10):
         #D:\pythonwork\Servercrash_detection\dataset\test_df.csv
         self.action_space = action_space
         self.directory = os.path.join(home+"/dataset")+"/"

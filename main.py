@@ -130,7 +130,7 @@ def meta_surrogate_loss(iteration_replays, iteration_policies, policy, baseline,
 
 def main(
         env_name='Serverusage',
-        exp_name = "reward_addTN",
+        exp_name = "reward_addTN_winsize10",
         adapt_lr=0.5,
         meta_lr=1.0,
         adapt_steps=1,
@@ -147,7 +147,10 @@ def main(
     random.seed(seed)
     np.random.seed(seed)
     torch.manual_seed(seed)
+
     writer = SummaryWriter()
+    
+
     device_name = 'cpu'
     if cuda:
         torch.cuda.manual_seed(seed)
@@ -164,11 +167,13 @@ def main(
     env.seed(seed)
     env.set_task(env.sample_tasks(1)[0])
     env = ch.envs.Torch(env)
+    cfg = ConfigTimeSeries()
+    
     print("main size :{}--{}".format(env.state_size, env.action_size))
     policy = CategoricalPolicy(env.state_size,env.action_size,device=device)
     if cuda:
         policy = policy.to(device)
-        print(summary(policy, input_size=(50,)))
+        print(summary(policy, input_size=(cfg.window*len(cfg.value_columns),)))
 
     
     #print(env.state_size, env.action_size)
@@ -177,6 +182,15 @@ def main(
 
     now = datetime.now()
     dt_string = now.strftime("%d/%m/%Y_%H%M%S")
+
+    exp_num = len(os.listdir("runs"))
+    print("Exp {} \n".format(exp_num))
+    savemodel_path = "save/exp{}".format(exp_num)
+    isExist = os.path.exists(savemodel_path)
+    if not isExist:
+   # Create a new directory because it does not exist
+        os.makedirs(savemodel_path)
+        print("[{}] is created!".format(savemodel_path))
 
     for iteration in range(num_iterations):
         
@@ -213,7 +227,7 @@ def main(
         adaptation_reward = iteration_reward / meta_bsz
         print('adaptation_reward', adaptation_reward)
         result_seq.append(adaptation_reward)
-        exp_num = len(os.listdir("runs"))
+        
         writer.add_scalar("Reward/{}_exp{}-{}".format(exp_name,exp_num,dt_string), adaptation_reward, iteration)
         writer.close()
         
@@ -260,7 +274,8 @@ def main(
                     p.data.add_(-stepsize, u.data)
                 break
 
-        torch.save(clone.state_dict(), "save/test.pt")
+        
+        torch.save(policy.state_dict(), "{}/it{}_model.pt".format(savemodel_path,exp_num))
 
     np.savetxt("test.csv", np.array(result_seq), delimiter=",")
     
