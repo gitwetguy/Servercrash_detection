@@ -130,7 +130,7 @@ def meta_surrogate_loss(iteration_replays, iteration_policies, policy, baseline,
 
 def main(
         env_name='Serverusage',
-        exp_name = "reward_addTN_winsize10",
+        exp_name = "action0-0reward_winsize10_onlycpuusage",
         adapt_lr=0.5,
         meta_lr=1.0,
         adapt_steps=1,
@@ -276,8 +276,9 @@ def main(
 
         
         torch.save(policy.state_dict(), "{}/it{}_model.pt".format(savemodel_path,exp_num))
+        np.savetxt("{}/it{}_reward.csv".format(savemodel_path,exp_num), np.array(result_seq), delimiter=",")
 
-    np.savetxt("test.csv", np.array(result_seq), delimiter=",")
+    
     
                
 

@@ -169,18 +169,14 @@ class Serverusage(MetaEnv):
         :return: arbitrary reward
         """
 
-        # print(action)
         if self.timeseries_cursor >= self.window and not self.done:
-            if np.sum(self.timeseries_labeled['anomaly'][self.timeseries_cursor-self.window:self.timeseries_cursor].values) >= 1:
-                if action == 0:
-                    return -self.bad_reward  # false negative, miss alarm
-                else:
-                    return self.good_reward  # 10      # true positive
-            if np.sum(self.timeseries_labeled['anomaly'][self.timeseries_cursor-self.window:self.timeseries_cursor].values) == 0:
-                if action == 1:
-                    return -self.bad_reward
-                else:
+            if action == 1:
+                if np.sum(self.timeseries_labeled['anomaly'][self.timeseries_cursor-self.window:self.timeseries_cursor].values) >= 1:
                     return self.good_reward
+                else:
+                    return -self.bad_reward
+            elif action == 0:
+                return 0
 
         return 0
 
