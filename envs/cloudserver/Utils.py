@@ -37,7 +37,6 @@ def load_csv(path, separator=",",columns=cfg.columns):
     
     return pd.read_csv(path, header=0, 
                            sep=separator,
-                           names=columns,
                            encoding="utf-8")
    
      

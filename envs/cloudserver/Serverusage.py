@@ -9,7 +9,7 @@ from learn2learn.gym.envs.meta_env import MetaEnv
 import os
 from sklearn.preprocessing import MinMaxScaler
 
-import Plots
+# import Plots
 import Utils,glob
 
 from gym import spaces
@@ -28,7 +28,7 @@ class Serverusage(MetaEnv):
         self.config = ConfigTimeSeries()
         self.filename = self.config.filename
         self.file = os.path.join(self.config.directory + self.filename)
-        self.filelist = glob.glob(os.path.join(self.config.directory+"*"))
+        self.filelist = glob.glob(os.path.join(self.config.directory+"pyod_res*"))
         self.sep = self.config.separator
         self.filename = self.config.filename
         self.window = self.config.window
@@ -39,7 +39,7 @@ class Serverusage(MetaEnv):
             self.timeseries_set.append(Utils.load_csv(pth))
 
         self.action_space_n = {0: 'normal', 1: 'abnormal'}
-        self.state_dim = self.config.window*len(self.config.value_columns)
+        self.state_dim = len(self.config.value_columns)
         low = np.zeros(self.state_dim,dtype=np.float32)
         high = np.ones(self.state_dim,dtype=np.float32)
         super(Serverusage, self).__init__(task)
@@ -47,7 +47,7 @@ class Serverusage(MetaEnv):
         self.bad_reward = 0.1
         
     
-        self.observation_space = spaces.Box(low=low, high=high,shape=(self.config.window*len(self.config.value_columns),), dtype=np.float32)
+        self.observation_space = spaces.Box(low=low, high=high,shape=(len(self.config.value_columns),), dtype=np.float32)
         self.action_space = spaces.Discrete(len(self.action_space_n))
         #print(self.action_space.sample())
         
@@ -68,13 +68,13 @@ class Serverusage(MetaEnv):
         """
         rd_dataidx = np.random.randint(len(self.filelist),size=1)
         self.timeseries_labeled=self.timeseries_set[rd_dataidx[0]]
-        rd_arr = np.random.randint(self.timeseries_labeled.shape[0]+self.config.window, size=num_tasks)
+        rd_arr = np.random.randint(self.timeseries_labeled.shape[0], size=num_tasks)
         
         # print(self.timeseries_set[rd_dataidx[0]])
         goals = []
 
         for i in rd_arr:
-            if np.sum(self.timeseries_labeled['anomaly'][i-self.window:i].values) >= 1:
+            if self.timeseries_labeled['Class'][i] == 1:
                 goals.append(1)
             else:
                 goals.append(0)
@@ -116,7 +116,7 @@ class Serverusage(MetaEnv):
         :param cursor: position in dataframe
         :return: boolean
         """
-        if self.timeseries_cursor >= len(self.timeseries_labeled) - 1:
+        if self.timeseries_cursor >= self.timeseries_labeled.shape[0] - 1:
             self.done = True
             return True
         else:
@@ -132,11 +132,10 @@ class Serverusage(MetaEnv):
                 return np.zeros(self.state_dim)
 
             # if self.timeseries_cursor >= self.window:
-            win_state=[]
-            for i in range(self.timeseries_cursor - self.window, self.timeseries_cursor):
-                win_state.append(self.timeseries_labeled[self.config.value_columns].values[i + 1])
-            win_state = np.array(win_state)
-            win_state = self.scaler.fit_transform(win_state).reshape(-1,)
+            win_state=self.timeseries_labeled[self.config.value_columns].values[self.timeseries_cursor]
+            
+            # win_state = np.array(win_state)
+            # win_state = self.scaler.fit_transform(win_state).reshape(-1,)
             # win_state = win_state.reshape(-1,)
             
             return win_state
@@ -179,14 +178,17 @@ class Serverusage(MetaEnv):
         :return: arbitrary reward
         """
 
-        if self.timeseries_cursor >= self.window and not self.done:
+        if not self.done:
             if action == 1:
-                if np.sum(self.timeseries_labeled['anomaly'][self.timeseries_cursor-self.window:self.timeseries_cursor].values) >= 1:
+                if self.timeseries_labeled['Class'][self.timeseries_cursor]== 1:
                     return self.good_reward
                 else:
                     return -self.bad_reward
             elif action == 0:
-                return 0
+                if self.timeseries_labeled['Class'][self.timeseries_cursor]== 0:
+                    return self.good_reward
+                else:
+                    return -self.bad_reward
 
         return 0
 
@@ -199,7 +201,7 @@ class Serverusage(MetaEnv):
         :param cursor: position in dataframe
         :return: boolean
         """
-        if self.timeseries_labeled['anomaly'][self.timeseries_cursor] == 1:
+        if self.timeseries_labeled['Class'][self.timeseries_cursor] == 1:
             return True
         else:
             return False
@@ -255,10 +257,11 @@ if __name__ == '__main__':
     print(env.action_space.sample())
     print(env.action_space.sample())
     print(env.sample_tasks(num_tasks=10))
+    print(env.get_series().describe())
     # while True:
     #     idx += 1
     #     s, r, d, t= env.step(1)
-    #     print(s.shape)
+    #     print(s)
     #     if d:
     #         print(idx)
     #         break

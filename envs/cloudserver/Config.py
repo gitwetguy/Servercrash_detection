@@ -14,8 +14,8 @@ class ConfigTimeSeries:
         self.normal = normal
         self.separator = separator
         self.window = window
-        self.columns = ["dt","CPU utilization (%)","Memory used  (%)","anomaly"]
-        self.value_columns = ["CPU utilization (%)"]
+        self.columns = ["One-class SVM (OCSVM)"	,"Isolation Forest"	,"Lightweight on-line detector of anomalies"	,"Class"]
+        self.value_columns = ["One-class SVM (OCSVM)"	,"Isolation Forest"	,"Lightweight on-line detector of anomalies"]
         self.filename = "test_df.csv"
         
 

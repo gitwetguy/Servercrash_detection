@@ -25,7 +25,7 @@ from torch.nn.utils import parameters_to_vector, vector_to_parameters
 from tqdm import tqdm
 
 import learn2learn as l2l
-from policy.policies import DiagNormalPolicy,CategoricalPolicy
+from policy.policies import CategoricalPolicy
 
 from envs.cloudserver.Serverusage import Serverusage
 from envs.cloudserver.BaseEnvironment import TimeSeriesEnvironment
@@ -34,6 +34,8 @@ from envs.cloudserver.Config import ConfigTimeSeries
 
 from torchsummary import summary
 from torch.utils.tensorboard import SummaryWriter
+from envs.cloudserver.Utils import load_csv
+from sklearn.preprocessing import MinMaxScaler
 
 from datetime import datetime
 
@@ -128,14 +130,71 @@ def meta_surrogate_loss(iteration_replays, iteration_policies, policy, baseline,
     return mean_loss, mean_kl
 
 
+
+
+def gen_dataset(data):
+    X_train = []   #預測點的前 60 天的資料
+    y_train = []   #預測點
+    X_train = data.iloc[:,:-1].values
+    y_train = data.iloc[:,-1].values
+    
+        
+    print("Gen data info:")
+    print("X_data_shape:{}".format(X_train.shape))
+    print("y_data_shape:{}".format(y_train.shape))
+    print("\n")
+          
+    return X_train,y_train
+
+def predict(model,test_data,y_test_data):
+    
+    # model is self(VGG class's object)
+    
+    count = test_data.shape[0]
+    result_np = []
+        
+    for idx in range(0, count):
+        # print(idx)
+        
+        input_data = torch.Tensor(test_data[idx].reshape(-1,)).to("cuda")
+
+        # print(img.shape)
+        ac,_ = model(input_data)
+        
+        pred_np = ac.cpu().numpy()
+        # for elem in pred_np:
+        result_np.append(pred_np)
+        # result_np = np.array(result_np)
+    return result_np
+
+def evaluate_model(model,X_test,y_test):
+    
+    model.eval().to("cuda")
+    res = predict(model,X_test,y_test)
+    from sklearn.metrics import f1_score,accuracy_score,precision_score,precision_recall_curve,recall_score
+
+    print("accuracy_score: {}".format(accuracy_score(y_test, res)))
+    print("precision_score: {}".format(precision_score(y_test, res)))
+    print("recall_score: {}".format(recall_score(y_test, res)))
+    print("f1_score: {}".format(f1_score(y_test, res)))
+
+    return accuracy_score(y_test, res),precision_score(y_test, res),recall_score(y_test, res),f1_score(y_test, res)
+
+
 def main(
         env_name='Serverusage',
-        exp_name = "action0-0reward_winsize10_onlycpuusage_editrange_addmoredata",
-        adapt_lr=0.5,
+        exp_name = "action0-0reward_winsize10_onlycpuusage_editrange_addmoredata_2adapt_steps_meta_bsz20_adapt_bsz20",
+        hidden_layer=[100,100],
+        #lr in inner loop
+        adapt_lr=0.0001,
+        #lr in outer loop
         meta_lr=1.0,
-        adapt_steps=1,
-        num_iterations=3000,
+        #adapt in outer loop
+        adapt_steps=2,
+        num_iterations=50,
+        #how many task in inner loop
         meta_bsz=10,
+        #how many gd dec in inner loop
         adapt_bsz=10,
         tau=1.00,
         gamma=0.95,
@@ -143,6 +202,11 @@ def main(
         num_workers=10,
         cuda=1,
 ):
+
+    ts_data = load_csv(r"D:\pythonwork\Servercrash_detection\dataset\pyod_res.csv")
+    X_test,y_test = gen_dataset(ts_data)
+    
+
     cuda = bool(cuda)
     random.seed(seed)
     np.random.seed(seed)
@@ -170,10 +234,10 @@ def main(
     cfg = ConfigTimeSeries()
     
     print("main size :{}--{}".format(env.state_size, env.action_size))
-    policy = CategoricalPolicy(env.state_size,env.action_size,device=device)
+    policy = CategoricalPolicy(env.state_size,env.action_size,hiddens=hidden_layer,device=device)
     if cuda:
         policy = policy.to(device)
-        print(summary(policy, input_size=(cfg.window*len(cfg.value_columns),)))
+        print(summary(policy, input_size=(len(cfg.value_columns),)))
 
     
     #print(env.state_size, env.action_size)
@@ -274,7 +338,13 @@ def main(
                     p.data.add_(-stepsize, u.data)
                 break
 
-        
+        acc,pre,rc,f1 = evaluate_model(clone,X_test,y_test)
+        writer.add_scalar("Accuracy/{}_exp{}-{}".format(exp_name,exp_num,dt_string), acc, iteration)
+        writer.add_scalar("Precision/{}_exp{}-{}".format(exp_name,exp_num,dt_string), pre, iteration)
+        writer.add_scalar("Recall/{}_exp{}-{}".format(exp_name,exp_num,dt_string), rc, iteration)
+        writer.add_scalar("F1 score/{}_exp{}-{}".format(exp_name,exp_num,dt_string), f1, iteration)
+        writer.close()
+
         torch.save(policy.state_dict(), "{}/it{}_model.pt".format(savemodel_path,exp_num))
         np.savetxt("{}/it{}_reward.csv".format(savemodel_path,exp_num), np.array(result_seq), delimiter=",")
 

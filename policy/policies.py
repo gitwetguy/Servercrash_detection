@@ -125,7 +125,7 @@ class CategoricalPolicy(nn.Module):
         state=state.to(self.device, non_blocking=True)
         #state = ch.onehot(state, dim=self.input_size)
         
-        loc = self.mean(state)
+        loc = self.mean(state).to(self.device)
         # print(loc)
         density = Categorical(logits=loc)
         # print(density)
