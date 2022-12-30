@@ -28,7 +28,7 @@ class Serverusage(MetaEnv):
         self.config = ConfigTimeSeries()
         self.filename = self.config.filename
         self.file = os.path.join(self.config.directory + self.filename)
-        self.filelist = glob.glob(os.path.join(self.config.directory+"pyod_res*"))
+        self.filelist = glob.glob(os.path.join(self.config.directory+"pyod_res_ec2*"))
         self.sep = self.config.separator
         self.filename = self.config.filename
         self.window = self.config.window
@@ -44,7 +44,7 @@ class Serverusage(MetaEnv):
         high = np.ones(self.state_dim,dtype=np.float32)
         super(Serverusage, self).__init__(task)
         self.good_reward = 1
-        self.bad_reward = 0.1
+        self.bad_reward = 1
         
     
         self.observation_space = spaces.Box(low=low, high=high,shape=(len(self.config.value_columns),), dtype=np.float32)
@@ -66,6 +66,7 @@ class Serverusage(MetaEnv):
         """
         Tasks correspond to a goal point chosen uniformly at random.
         """
+        # print(len(self.filelist))
         rd_dataidx = np.random.randint(len(self.filelist),size=1)
         self.timeseries_labeled=self.timeseries_set[rd_dataidx[0]]
         rd_arr = np.random.randint(self.timeseries_labeled.shape[0], size=num_tasks)
@@ -186,10 +187,9 @@ class Serverusage(MetaEnv):
                     return -self.bad_reward
             elif action == 0:
                 if self.timeseries_labeled['Class'][self.timeseries_cursor]== 0:
-                    return self.good_reward
+                    return 0
                 else:
-                    return -self.bad_reward
-
+                    return 0
         return 0
 
     def render(self, mode=None):

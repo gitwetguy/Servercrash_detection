@@ -136,7 +136,7 @@ def gen_dataset(data):
     X_train = []   #預測點的前 60 天的資料
     y_train = []   #預測點
     X_train = data.iloc[:,:-1].values
-    y_train = data.iloc[:,-1].values
+    y_train = data.iloc[:,-1].values.reshape(-1,1)
     
         
     print("Gen data info:")
@@ -183,15 +183,15 @@ def evaluate_model(model,X_test,y_test):
 
 def main(
         env_name='Serverusage',
-        exp_name = "action0-0reward_winsize10_onlycpuusage_editrange_addmoredata_2adapt_steps_meta_bsz20_adapt_bsz20",
+        exp_name = "pyod_feature_2adapt_steps_meta_bsz20_adapt_bsz20_TNFN_reward0",
         hidden_layer=[100,100],
         #lr in inner loop
-        adapt_lr=0.0001,
+        adapt_lr=0.001,
         #lr in outer loop
         meta_lr=1.0,
         #adapt in outer loop
         adapt_steps=2,
-        num_iterations=50,
+        num_iterations=2000,
         #how many task in inner loop
         meta_bsz=10,
         #how many gd dec in inner loop
